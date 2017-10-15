@@ -1,0 +1,66 @@
+---
+title: "Practical Machine Learning"
+author: "Brian Lackey"
+date: "10/14/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Practical Machine Learning
+
+In this course project, predictions are made as to whether study participants used correct form or one of 5 different incorrect forms when performing dumbell lifts. Six participants wore accelerometers on their belt, forearm, arm, and dumbell when performing excercises both correctly and incorrectly. Data from these accelerometers were divided into testing and training datasets. By using random forrest techniques, I attempted to train a model on the training dataset to accurately predict the "class" of exercise that an observation represents in the testing dataset.
+
+## Reading in Data
+
+The testing and training datasets provided for this project can be found here: 
+
+Training: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+Testing: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+These were downloaded to the working directory and then read in as follows. Having previously explored the data a bit, it looked like there were several ways that the data showed up as missing/NA/etc. As such, I'm going ahead and reading in these values all as NA.
+
+```{r}
+library(caret)
+training <- read.csv("pml-training.csv",na.strings=c('','#DIV/0!','NA'))
+testing <- read.csv("pml-testing.csv",na.strings=c('','#DIV/0!','NA'))
+str(training)
+```
+
+## Data Munging
+First of all, there are several variables I'm noticing that we probably don't want to include in the prediction algorithm, like time, user_name, etc. that might lead to overfitting of the model since they likely don't have anything to do with HOW a curl is actually performed. Let's remove the first 5 variables for that reason.
+```{r}
+training<-training[,-(1:5)]
+testing<-testing[,-(1:5)]
+```
+
+Alright, now let's figure out which of these 155 remiaing variables are actually useful to us. Perhaps some are mostly NA. If so, we can probably get rid of them for prediction purposes. Random forests and NAs don't get along so well and they're probably not very useful in prediction anyway...
+```{r}
+
+keepers <- lapply(training, function(x) sum(is.na(x)) / length(x) ) < 0.5
+training<-training[keepers]
+testing<-testing[keepers]
+str(training)
+
+```
+
+## Random Forrest Model Creation
+
+Let's make some random forrests now, shall we? A seed of 4 seems as good as any.
+```{r}
+set.seed(4)
+rf<-train(classe ~ ., data=training, method = "rf")
+rf
+plot(rf)
+```
+
+## Final Predictions
+Let's take that model and try to predict the classes of exercises that actually are represented by the 20 testing dataset observations.
+
+```{r}
+finalPredict<-predict(rf,testing)
+finalPredict
+```
